@@ -6,8 +6,32 @@ import LoadingDots from "./LoadingDots";
 import UploadIcon from "../../public/uploadIcon.svg";
 import Image from "next/image";
 import { vttToJson } from "../utils/fileProcessing";
+import Spinner from "./Spinner";
+import TextArea from "./TextArea";
 
 const FILE_SIZE_LIMIT_MB = 10;
+
+// FOR DEVELOPMENT
+const templateMeetinMinutes = `
+Dear all,
+
+Please find the minutes of our meeting below.
+
+Key points:
+- We discussed the new project
+- We decided to use the new API
+- We agreed to meet again next week
+
+Action points:
+- John to send the requirements to the team
+- Jane to prepare the presentation
+- Mike to contact the client
+
+Please let me know if I missed anything.
+
+Best regards,
+John Doe
+`;
 
 export default function Uploader() {
   const [data, setData] = useState<{
@@ -18,6 +42,9 @@ export default function Uploader() {
   const [file, setFile] = useState<File | null>(null);
 
   const [dragActive, setDragActive] = useState(false);
+
+  const [pendingResponse, setPendingResponse] = useState(false);
+  const [processingResult, setProcessingResult] = useState("");
 
   const onChangeTranscript = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
@@ -44,16 +71,40 @@ export default function Uploader() {
     return !data.transcript || saving;
   }, [data.transcript, saving]);
 
+  if (pendingResponse) {
+    return (
+      <div className="flex flex-col items-center justify-center">
+        <LoadingDots color="#808080" />
+        <p className="mt-2 text-center text-sm text-gray-500">
+          Processing your file
+        </p>
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (processingResult) {
+    return <TextArea content={processingResult} />;
+  }
+
   return (
     <form
       className="grid gap-6"
       onSubmit={async (e) => {
         e.preventDefault();
         setSaving(true);
-        console.log("Saving...");
-        console.log(data);
-        const json = vttToJson(data.transcript as string);
-        console.log(json);
+        // Validate file to have speakers
+        if (!data.transcript) {
+          toast.error("No transcript uploaded");
+          setSaving(false);
+          return;
+        }
+        // make fake sleep to simulate upload
+        setPendingResponse(true);
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        setPendingResponse(false);
+        setProcessingResult(templateMeetinMinutes);
+
         setSaving(false);
       }}
     >
