@@ -5,35 +5,15 @@ import toast from "react-hot-toast";
 import LoadingDots from "./LoadingDots";
 import UploadIcon from "../../public/uploadIcon.svg";
 import Image from "next/image";
-import { vttToJson } from "../utils/fileProcessing";
+import { vttToJson } from "../utils/vttProcessing";
 import Spinner from "./Spinner";
 import TextArea from "./TextArea";
+import { postChatCompletions } from "@/services/openaiAzure";
+import { ApiState } from "@/app/page";
 
 const FILE_SIZE_LIMIT_MB = 10;
 
-// FOR DEVELOPMENT
-const templateMeetinMinutes = `
-Dear all,
-
-Please find the minutes of our meeting below.
-
-Key points:
-- We discussed the new project
-- We decided to use the new API
-- We agreed to meet again next week
-
-Action points:
-- John to send the requirements to the team
-- Jane to prepare the presentation
-- Mike to contact the client
-
-Please let me know if I missed anything.
-
-Best regards,
-John Doe
-`;
-
-export default function Uploader() {
+export default function Uploader(state: ApiState) {
   const [data, setData] = useState<{
     transcript: string | null;
   }>({
@@ -99,12 +79,23 @@ export default function Uploader() {
           setSaving(false);
           return;
         }
-        // make fake sleep to simulate upload
+        let vttJson = vttToJson(data.transcript);
+        console.log(vttJson);
+        let query = "";
+        let last_speaker = "";
+        vttJson.forEach((element) => {
+          let text = element.text;
+          let speaker = element.speaker;
+          if (speaker != last_speaker) {
+            query += "\n" + speaker + ": ";
+            last_speaker = speaker;
+          }
+          query += text + " ";
+        });
         setPendingResponse(true);
-        await new Promise((resolve) => setTimeout(resolve, 3000));
+        let res = await postChatCompletions(state, query);
         setPendingResponse(false);
-        setProcessingResult(templateMeetinMinutes);
-
+        setProcessingResult(res);
         setSaving(false);
       }}
     >
@@ -173,7 +164,7 @@ export default function Uploader() {
               Drag and drop or click to upload.
             </p>
             <p className="mt-2 text-center text-sm text-gray-500">
-              Max file size: ${FILE_SIZE_LIMIT_MB}MB
+              Max file size: {FILE_SIZE_LIMIT_MB}MB
             </p>
             <span className="sr-only">Transcript upload</span>
           </div>
