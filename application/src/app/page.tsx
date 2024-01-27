@@ -60,7 +60,7 @@ export default function Home() {
     }));
   };
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
     setData(true);
     // Save the value to local storage whenever it changes
     localStorage.setItem("apiState", JSON.stringify(value));
